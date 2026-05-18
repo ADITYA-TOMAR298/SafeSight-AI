@@ -21,6 +21,7 @@ Usage:
     python detect_scissors.py --camera 1              # use second camera
     python detect_scissors.py --confidence 0.4        # lower confidence threshold
 """
+# checkig code
 
 import cv2
 import numpy as np
