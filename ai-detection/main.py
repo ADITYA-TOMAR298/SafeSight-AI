@@ -1,27 +1,3 @@
-"""
-Object Detection with YOLOv8 - Scissors Alert System
-=====================================================
-Detects scissors (and other objects) via webcam.
-When scissors are detected:
-  - Draws a RED bounding box around them
-  - Shows an alert message on screen
-  - Plays a beep sound alert
-
-Requirements:
-    pip install ultralytics opencv-python numpy
-
-Optional (for better beep sound):
-    pip install playsound  (Windows/Mac)
-    sudo apt-get install python3-gst-1.0  (Linux alternative)
-
-Usage:
-    python detect_scissors.py
-    python detect_scissors.py --target "knife"        # detect knife instead
-    python detect_scissors.py --target "scissors" "knife" "gun"  # multiple targets
-    python detect_scissors.py --camera 1              # use second camera
-    python detect_scissors.py --confidence 0.4        # lower confidence threshold
-"""
-
 import cv2
 import numpy as np
 import argparse
@@ -66,20 +42,61 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def play_alert_sound():
-    """Play a beep/alert sound (non-blocking)."""
+    """Play a loud siren-style alert (non-blocking) — 7 cycles, ~7 seconds."""
     def _play():
         if SOUND_METHOD == "winsound":
-            for _ in range(3):
-                winsound.Beep(1000, 200)
-                time.sleep(0.1)
+            # winsound.Beep(frequency_hz, duration_ms)
+            # Range: 400Hz (deep rumble) → 2000Hz (sharp piercing)
+            # 7 siren cycles × ~900ms each = ~7 seconds total
+            for _ in range(7):
+                # Rising — low to high
+                for freq, dur in [
+                    (400, 150),
+                    (600, 150),
+                    (800, 150),
+                    (1000,150),
+                    (1200,150),
+                    (1500,150),
+                    (1800,150),
+                    (2000,300),  # peak — most piercing frequency
+                ]:
+                    winsound.Beep(freq, dur)
+                time.sleep(0.03)
+                # Falling — high back to low
+                for freq, dur in [
+                    (2000,150),
+                    (1800,150),
+                    (1500,150),
+                    (1200,150),
+                    (1000,150),
+                    (800, 150),
+                    (600, 150),
+                    (400, 300),  # deep rumble finish
+                ]:
+                    winsound.Beep(freq, dur)
+                time.sleep(0.05)
+
         elif SOUND_METHOD == "beep_cmd":
             import subprocess
-            subprocess.run(["beep", "-f", "1000", "-l", "200",
-                            "-n", "-f", "1000", "-l", "200"], capture_output=True)
+            pattern = []
+            for _ in range(7):
+                for f, d in [
+                    (400,150),(600,150),(800,150),(1000,150),
+                    (1200,150),(1500,150),(1800,150),(2000,300),
+                    (2000,150),(1800,150),(1500,150),(1200,150),
+                    (1000,150),(800,150),(600,150),(400,300),
+                ]:
+                    pattern += ["-f", str(f), "-l", str(d), "-n"]
+            if pattern and pattern[-1] == "-n":
+                pattern = pattern[:-1]
+            subprocess.run(["beep"] + pattern, capture_output=True)
+
         else:
-            # Terminal bell — works in most terminals
-            sys.stdout.write("\a\a\a")
-            sys.stdout.flush()
+            # Terminal bell fallback — 15 bells
+            for _ in range(15):
+                sys.stdout.write("\a")
+                sys.stdout.flush()
+                time.sleep(0.10)
 
     threading.Thread(target=_play, daemon=True).start()
 
